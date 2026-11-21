@@ -12,11 +12,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.7
-      - name: Zip ac ve derle
+      - name: Zip ac ve duzelt
         run: |
           mkdir proj
           unzip -q CleanPhone-Android-Project.zip -d proj
-          find proj -maxdepth 3 | head -30
+          python3 - <<'PY'
+          import glob
+          p = glob.glob('proj/**/Ui.kt', recursive=True)[0]
+          s = open(p, encoding='utf-8').read()
+          old = 'val penalty = findings.sumOf { when (it.level) { 2 -> 15; 1 -> 7; else -> 0 } }'
+          new = 'val penalty: Int = findings.fold(0) { acc, x -> acc + (if (x.level == 2) 15 else if (x.level == 1) 7 else 0) }'
+          assert old in s
+          open(p, 'w', encoding='utf-8').write(s.replace(old, new))
+          PY
+      - name: Derle
+        run: |
           cd "$(dirname "$(find proj -name settings.gradle.kts | head -1)")"
           gradle assembleDebug --no-daemon
       - name: APK dosyasini topla
